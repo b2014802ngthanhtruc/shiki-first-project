@@ -4,8 +4,10 @@ export class UpdateUserDto {
   lastName: string;
   adminStatus: string;
   usersStatus: string;
+  salerStatus: string;
   isAdmin: boolean;
   isUser: boolean;
+  isSaler: boolean;
 
   createAt: Date;
   updateAt: Date;

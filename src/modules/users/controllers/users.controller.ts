@@ -8,6 +8,7 @@ import {
   Delete,
   UseGuards,
   Query,
+  Req,
 } from '@nestjs/common';
 import { UsersService } from '../services/users.service';
 import { CreateUserDto } from '../dto/create-user.dto';
@@ -20,6 +21,7 @@ import { JwtAccessAuthGuard } from '@modules/auth/guards';
 import { query } from 'express';
 import { BaseQueryParams } from '@common/dtos';
 import { BaseQueryParamsValidator } from '@common/validators';
+import { ResponseService } from '@shared/response/response.service';
 
 @Controller('users')
 export class UsersController {
@@ -35,11 +37,13 @@ export class UsersController {
 
   @UseGuards(AdminJwtAccessAuthGuard)
   @Get()
-  findAll(
+  async findAll(
     @Query(new JoiValidationPipe(BaseQueryParamsValidator))
     query: BaseQueryParams,
+    @Req() req,
   ) {
-    return this.usersService.findMany(query);
+    const { count, data } = await this.usersService.findMany(query);
+    return ResponseService.paginateResponse({ count, data, query, req });
   }
 
   @Get(':id')
@@ -47,7 +51,7 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
-  // @UseGuards(JwtAccessAuthGuard)
+  @UseGuards(JwtAccessAuthGuard)
   @Patch(':id')
   update(
     @Param('id') id: string,

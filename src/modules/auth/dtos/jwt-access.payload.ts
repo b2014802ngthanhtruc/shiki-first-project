@@ -5,4 +5,5 @@ export class JwtAccessPayload {
   lastName: string | null;
   isAdmin: string;
   isUser: string;
+  isSaler: string;
 }

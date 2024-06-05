@@ -1,9 +1,10 @@
 import { BadRequestException, Injectable, Search } from '@nestjs/common';
+
+import { BaseQueryParams } from '@common/dtos';
 import { CreateUserDto } from '../dto/create-user.dto';
+import { USER_ERROR } from 'src/content/errors/user.error';
 import { UpdateUserDto } from '../dto/update-user.dto';
 import { UserRepository } from '../repositories/users.repository';
-import { USER_ERROR } from 'src/content/errors/user.error';
-import { BaseQueryParams } from '@common/dtos';
 
 @Injectable()
 export class UsersService {
@@ -18,58 +19,85 @@ export class UsersService {
     });
     console.log(user);
     if (!user) {
-      return this._userRepository.create(createUserDto);
+      const result = await this._userRepository.create(createUserDto);
+      delete result.password;
+      return result;
     }
     throw new BadRequestException('Email is already exist');
   }
 
-  findMany(params: BaseQueryParams) {
+  async findMany(params: BaseQueryParams) {
     console.log(params);
-    return this._userRepository.findMany({
-      skip: (params.page - 1) * params.limit,
-      take: params.limit,
-      where: params.search
-        ? {
-            OR: [
-              { firstName: { contains: params.search, mode: 'insensitive' } },
-              { lastName: { contains: params.search, mode: 'insensitive' } },
-              { email: { contains: params.search, mode: 'insensitive' } },
-            ],
-          }
-        : undefined,
-      orderBy: params.sort
-        ? Object.entries(params.sort).map(([key, value]) => ({ [key]: value }))
-        : undefined,
-    });
+    const result = {
+      count: await this._userRepository.count({}),
+      data: await this._userRepository.findMany({
+        skip: (params.page - 1) * params.limit,
+        take: params.limit,
+        where: params.search
+          ? {
+              OR: [
+                { firstName: { contains: params.search, mode: 'insensitive' } },
+                { lastName: { contains: params.search, mode: 'insensitive' } },
+                { email: { contains: params.search, mode: 'insensitive' } },
+              ],
+            }
+          : undefined,
+        orderBy: params.sort
+          ? Object.entries(params.sort).map(([key, value]) => ({
+              [key]: value,
+            }))
+          : undefined,
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          adminStatus: true,
+          salerStatus: true,
+          userStatus: true,
+          isAdmin: true,
+          isSaler: true,
+          isUser: true,
+          createdAt: true,
+          updatedAt: true,
+          deletedAt: true,
+        },
+      }),
+    };
+    return result;
   }
 
-  findByEmail(email: string) {
-    return this._userRepository.findOne({
+  async findByEmail(email: string) {
+    const result = await this._userRepository.findOne({
       where: {
         email: email,
         deletedAt: null,
       },
     });
+    return result;
   }
 
-  findOne(id: string) {
-    return this._userRepository.findOne({
+  async findOne(id: string) {
+    const result = await this._userRepository.findOne({
       where: {
         id,
       },
     });
+    return result;
   }
 
-  update(id: string, updateUserDto: UpdateUserDto) {
-    return this._userRepository.update({
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    const result = await this._userRepository.update({
       where: {
         id,
       },
       data: updateUserDto,
     });
+    delete result.password;
+    return result;
   }
 
-  remove(id: string) {
+  async remove(id: string) {
     const user = this._userRepository.findOne({
       where: {
         id,
@@ -78,9 +106,10 @@ export class UsersService {
 
     if (!user) throw new BadRequestException(USER_ERROR.USER_01);
 
-    return this._userRepository.delete({
+    await this._userRepository.delete({
       id,
     });
+    return 'Success';
   }
 
   saveResetCode(id: string, resetCode: string) {

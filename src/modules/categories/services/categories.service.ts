@@ -1,14 +1,28 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+
 import { BaseQueryParams } from '@common/dtos';
 import { CategoryRepository } from '../repositories/category.repository';
 import { CreateCategoryDto } from '../dtos/createCategories.dto';
+import { ProductRepository } from '@modules/products/repositories/product.repository';
+import { ProductService } from '@modules/products/services/product.service';
 import { UpdateCategoryDto } from '../dtos/updateCategories.dto';
+import { join } from 'path';
 
 @Injectable()
 export class CategoryService {
   constructor(private readonly categoryRepository: CategoryRepository) {}
 
   async create(createCategoryDto: CreateCategoryDto) {
+    const productName = await this.categoryRepository.findOne({
+      where: {
+        name: createCategoryDto.name,
+      },
+    });
+    if (productName) throw new BadRequestException('Category is already exist');
     const category = await this.categoryRepository.findOne({
       where: {
         id: createCategoryDto.parentId,
@@ -27,22 +41,26 @@ export class CategoryService {
     });
   }
 
-  findMany(params: BaseQueryParams) {
-    return this.categoryRepository.findMany({
-      skip: (params.page - 1) * params.limit,
-      take: params.limit,
-      where: {
-        level: 1,
-      },
-      include: {
-        childCategories: {
-          include: {
-            childCategories: true,
-          },
+  async findMany(params: BaseQueryParams) {
+    const result = {
+      count: await this.categoryRepository.count({}),
+      data: await this.categoryRepository.findMany({
+        skip: (params.page - 1) * params.limit,
+        take: params.limit,
+        where: {
+          level: 0,
         },
-        parent: true,
-      },
-    });
+        include: {
+          childCategories: {
+            include: {
+              childCategories: true,
+            },
+          },
+          parent: true,
+        },
+      }),
+    };
+    return result;
   }
 
   async update(id: string, updateCategoryDto: UpdateCategoryDto) {
@@ -52,27 +70,13 @@ export class CategoryService {
       },
     });
     if (!category) throw new BadRequestException('Category not found');
+    if (category.childCategories.length > 0)
+      throw new BadRequestException('Category cannot be update');
     return this.categoryRepository.update({
       where: {
         id: id,
       },
-      data: updateCategoryDto.parentId
-        ? {
-            parent: category.parentId
-              ? {
-                  connect: {
-                    id: updateCategoryDto.parentId,
-                  },
-                }
-              : {
-                  connect: {
-                    id: updateCategoryDto.parentId,
-                  },
-                },
-            level: category.level < 2 ? category.level + 1 : category.level,
-            // name: updateCategoryDto.name,
-          }
-        : updateCategoryDto,
+      data: updateCategoryDto,
     });
   }
 
@@ -91,6 +95,84 @@ export class CategoryService {
       },
     });
   }
+
+  // async findProduct(id: string) {
+  //   const category = await this.categoryRepository.findOne({
+  //     where: {
+  //       id,
+  //     },
+  //   });
+  //   if (!category) throw new NotFoundException('Category not found');
+  //   const products = await this.productRepository.findMany({
+  //     where: {
+  //       categories: {
+  //         has: id,
+  //       },
+  //     },
+  //   });
+  /* SELECT * FROM Product
+      WHERE categoryId in (
+        SELECT * FROM Category
+          WHERE id in (
+            SELECT * FROM Category
+              WHERE parentId in (
+                SELECT * FROM Category
+                  WHERE id == ($id)
+              )
+          )
+      OR parentId in (
+        SELECT * FROM Category
+          WHERE id in (
+            SELECT * FROM Category
+              WHERE parentId in (
+                SELECT * FROM Category
+                  WHERE id == ($id)
+              )
+          )
+      )
+      */
+  // if (category.level === 2)
+  //   return this.productRepository.findMany({
+  //     where: {
+  //       categoryId: id,
+  //     },
+  //   });
+
+  // const getChildCategories = async (categoryId) => {
+  //   const childCategories = await this.categoryRepository.findMany({
+  //     where: { parentId: categoryId },
+  //     include: { childCategories: true },
+  //   });
+  //   return childCategories;
+  // };
+
+  // const getAllChildCategories = async (categoryId) => {
+  //   const directChildren = await getChildCategories(categoryId);
+  //   const allChildren = await Promise.all(
+  //     directChildren.map(async (child) => {
+  //       const descendants = await getAllChildCategories(child.id);
+  //       return [child, ...descendants];
+  //     }),
+  //   );
+  //   return allChildren.flat();
+  // };
+
+  // const allChildCategories = await getAllChildCategories(id);
+
+  // const level2Categories = allChildCategories.filter(
+  //   (category) => category.level === 2,
+  // );
+
+  // const products = await this.productRepository.findMany({
+  //   where: {
+  //     categoryId: {
+  //       in: level2Categories.map((category) => category.id),
+  //     },
+  //   },
+  // });
+
+  // return products;
+  //}
 
   async remove(id: string) {
     const category = await this.categoryRepository.findOne({

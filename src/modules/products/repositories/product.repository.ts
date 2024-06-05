@@ -1,6 +1,6 @@
+import { DefaultArgs } from '@prisma/client/runtime/library';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { DefaultArgs } from '@prisma/client/runtime/library';
 import { PrismaService } from '@shared/prisma/prisma.service';
 
 @Injectable()
@@ -33,5 +33,34 @@ export class ProductRepository {
 
   async delete(where: Prisma.ProductWhereUniqueInput) {
     return this._model.delete({ where });
+  }
+
+  async getByCategory(id: string) {
+    const products = await this.prisma.$queryRaw`
+      SELECT *
+      FROM "Product"
+      WHERE "categoryId" IN (
+          SELECT id
+          FROM "Category"
+          WHERE "parentId" = ${id}
+          UNION ALL
+          SELECT id
+          FROM "Category"
+          WHERE id = ${id}
+      )
+      OR "categoryId" IN (
+          SELECT id
+          FROM "Category"
+          WHERE "parentId" IN (
+              SELECT id
+              FROM "Category"
+              WHERE "parentId" = ${id}
+              UNION ALL
+              SELECT id
+              FROM "Category"
+              WHERE id = ${id}
+          )
+      );`;
+    return products;
   }
 }

@@ -10,26 +10,36 @@ import {
   Param,
   Patch,
   Delete,
+  Request,
+  Req,
 } from '@nestjs/common';
 import { BaseQueryParams } from '@common/dtos';
 import { JoiValidationPipe } from '@common/pipes';
 import { UpdateProductDto } from '../dtos/updateProduct.dto';
+import { ResponseService } from '@shared/response/response.service';
+import { UpdateProductDtoValidator } from '../validators/update-product-dto.validator';
+import { CreateProductDtoValidator } from '../validators/create-product-dto.validator';
 
 @Controller('products')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Post()
-  create(@Body() data: CreateProductDto) {
+  create(
+    @Body(new JoiValidationPipe(CreateProductDtoValidator))
+    data: CreateProductDto,
+  ) {
     return this.productService.createProduct(data);
   }
 
   @Get()
-  findMany(
+  async findMany(
     @Query(new JoiValidationPipe(BaseQueryParamsValidator))
-    params: BaseQueryParams,
+    query: BaseQueryParams,
+    @Req() req,
   ) {
-    return this.productService.findMany(params);
+    const { count, data } = await this.productService.findMany(query);
+    return ResponseService.paginateResponse({ count, data, query, req });
   }
 
   @Get(':id')
@@ -37,8 +47,17 @@ export class ProductController {
     return this.productService.findOne(params);
   }
 
+  @Get('/category/:id')
+  findByCategory(@Param('id') id: string) {
+    return this.productService.findByCategory(id);
+  }
+
   @Patch(':id')
-  update(@Param('id') params: string, @Body() data: UpdateProductDto) {
+  update(
+    @Param('id') params: string,
+    @Body(new JoiValidationPipe(UpdateProductDtoValidator))
+    data: UpdateProductDto,
+  ) {
     return this.productService.update(params, data);
   }
 

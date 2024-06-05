@@ -1,12 +1,5 @@
 import * as bcrypt from 'bcryptjs';
-import { JwtPayload, SignOptions, decode, sign } from 'jsonwebtoken';
-import { CONFIG_VAR } from '@config/index';
-import {
-  BadRequestException,
-  Injectable,
-  UnauthorizedException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+
 import {
   ACCESS_TOKEN,
   ADMIN_ACCESS_TOKEN,
@@ -14,7 +7,14 @@ import {
   AFFILICATE_ACCESS_TOKEN,
   AFFILICATE_REFRESH_TOKEN,
   REFRESH_TOKEN,
+  SALER_ACCESS_TOKEN,
+  SALER_REFRESH_TOKEN,
 } from '../constants';
+import {
+  BadRequestException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import {
   ChangePasswordDto,
   GetStartedDto,
@@ -25,13 +25,17 @@ import {
   RegisterDto,
   ResetPasswordDto,
 } from '../dtos';
-import { UsersService } from '@modules/users/services/users.service';
+import { JwtPayload, SignOptions, decode, sign } from 'jsonwebtoken';
+import { boolean, string } from 'joi';
+
+import { AUTH_ERRORS } from 'src/content/errors/auth.error';
+import { CONFIG_VAR } from '@config/index';
+import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from '@modules/users/dto/create-user.dto';
 import { LoginProviderType } from '../enums/login-provider-type.enum';
-import { AUTH_ERRORS } from 'src/content/errors/auth.error';
-import { boolean, string } from 'joi';
-import { use } from 'passport';
 import { MailService } from '../../../shared/mail/mail.service';
+import { UsersService } from '@modules/users/services/users.service';
+import { use } from 'passport';
 
 export type TokenType =
   | typeof ACCESS_TOKEN
@@ -39,7 +43,9 @@ export type TokenType =
   | typeof AFFILICATE_ACCESS_TOKEN
   | typeof AFFILICATE_REFRESH_TOKEN
   | typeof ADMIN_ACCESS_TOKEN
-  | typeof ADMIN_REFRESH_TOKEN;
+  | typeof ADMIN_REFRESH_TOKEN
+  | typeof SALER_ACCESS_TOKEN
+  | typeof SALER_REFRESH_TOKEN;
 
 @Injectable()
 export class AuthService {
@@ -48,6 +54,8 @@ export class AuthService {
     [REFRESH_TOKEN]: string;
     [ADMIN_ACCESS_TOKEN]: string;
     [ADMIN_REFRESH_TOKEN]: string;
+    [SALER_ACCESS_TOKEN]: string;
+    [SALER_REFRESH_TOKEN]: string;
   };
 
   private readonly _jwtOptions: {
@@ -55,6 +63,8 @@ export class AuthService {
     [REFRESH_TOKEN]: SignOptions;
     [ADMIN_ACCESS_TOKEN]: SignOptions;
     [ADMIN_REFRESH_TOKEN]: SignOptions;
+    [SALER_ACCESS_TOKEN]: SignOptions;
+    [SALER_REFRESH_TOKEN]: SignOptions;
   };
 
   constructor(
@@ -79,6 +89,14 @@ export class AuthService {
         CONFIG_VAR.ADMIN_JWT_REFRESH_SECRET,
         'default_secret',
       ),
+      [SALER_ACCESS_TOKEN]: _configService.get(
+        CONFIG_VAR.SALER_JWT_SECRET,
+        'default_secret',
+      ),
+      [SALER_REFRESH_TOKEN]: _configService.get(
+        CONFIG_VAR.ADMIN_JWT_REFRESH_SECRET,
+        'default_secret',
+      ),
     };
 
     this._jwtOptions = {
@@ -92,6 +110,12 @@ export class AuthService {
         expiresIn: this._configService.get(CONFIG_VAR.JWT_EXPIRES_IN),
       },
       [ADMIN_REFRESH_TOKEN]: {
+        expiresIn: this._configService.get(CONFIG_VAR.JWT_REFRESH_EXPIRES_IN),
+      },
+      [SALER_ACCESS_TOKEN]: {
+        expiresIn: this._configService.get(CONFIG_VAR.JWT_EXPIRES_IN),
+      },
+      [SALER_REFRESH_TOKEN]: {
         expiresIn: this._configService.get(CONFIG_VAR.JWT_REFRESH_EXPIRES_IN),
       },
     };
@@ -110,10 +134,12 @@ export class AuthService {
       password: passwordHash,
       firstName: data.firstName ? data.firstName : 'New user',
       lastName: data.lastName ? data.lastName : 'New user',
-      adminStatus: 'None',
+      adminStatus: 'InActive',
       userStatus: 'Active',
+      salerStatus: 'InActive',
       isAdmin: false,
       isUser: true,
+      isSaler: false,
     };
     return await this.userService.create(user);
   }
@@ -131,12 +157,43 @@ export class AuthService {
         lastName: user.lastName,
         isAdmin: user.isAdmin ? 'true' : 'false',
         isUser: user.isUser ? 'true' : 'false',
+        isSaler: user.isSaler ? 'true' : 'false',
       };
       const jwtRefreshPayload: JwtRefreshPayload = {
         id: user.id,
       };
       const accessToken = this._signPayload(jwtAccessPayload, ACCESS_TOKEN);
       const refreshToken = this._signPayload(jwtRefreshPayload, REFRESH_TOKEN);
+      return {
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+      };
+    }
+  }
+
+  async salerLogin(login: LoginDto) {
+    const user = await this.userService.findByEmail(login.email);
+    if (user.isSaler) {
+      const jwtAccessPayload: JwtAccessPayload = {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        isAdmin: user.isAdmin ? 'true' : 'false',
+        isUser: user.isUser ? 'true' : 'false',
+        isSaler: user.isSaler ? 'true' : 'false',
+      };
+      const jwtRefreshPayload: JwtRefreshPayload = {
+        id: user.id,
+      };
+      const accessToken = this._signPayload(
+        jwtAccessPayload,
+        SALER_ACCESS_TOKEN,
+      );
+      const refreshToken = this._signPayload(
+        jwtRefreshPayload,
+        SALER_REFRESH_TOKEN,
+      );
       return {
         accessToken: accessToken,
         refreshToken: refreshToken,
@@ -163,8 +220,36 @@ export class AuthService {
       lastName: user.lastName,
       isAdmin: user.isAdmin ? 'true' : 'false',
       isUser: user.isUser ? 'true' : 'false',
+      isSaler: user.isSaler ? 'true' : 'false',
     };
     const accessToken = this._signPayload(jwtAccessPayload, ACCESS_TOKEN);
+    return {
+      accessToken,
+    };
+  }
+
+  async salerRefreshToken(data: RefreshTokenDto) {
+    const token = this._decodeToken(data.refresh);
+    if (typeof token === 'string' || !token) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    const { id } = token as JwtRefreshPayload;
+    const user = await this.userService.findOne(id);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+
+    const jwtAccessPayload: JwtAccessPayload = {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      isAdmin: user.isAdmin ? 'true' : 'false',
+      isUser: user.isUser ? 'true' : 'false',
+      isSaler: user.isSaler ? 'true' : 'false',
+    };
+    const accessToken = this._signPayload(jwtAccessPayload, SALER_ACCESS_TOKEN);
     return {
       accessToken,
     };
@@ -189,6 +274,7 @@ export class AuthService {
       lastName: user.lastName,
       isAdmin: user.isAdmin ? 'true' : 'false',
       isUser: user.isUser ? 'true' : 'false',
+      isSaler: user.isSaler ? 'true' : 'false',
     };
     const accessToken = this._signPayload(jwtAccessPayload, ADMIN_ACCESS_TOKEN);
     return {
@@ -199,7 +285,8 @@ export class AuthService {
   async changePassword(data: ChangePasswordDto) {
     const user = await this.userService.findOne(data.id);
     if (!user) throw new UnauthorizedException(AUTH_ERRORS.AUTH_01);
-    return this.userService.updatePassword(user.id, data.password);
+    const passwordHash = await this._hashPassword(data.password);
+    return this.userService.updatePassword(user.id, passwordHash);
   }
 
   async forgotPassword(email: string) {
@@ -238,6 +325,7 @@ export class AuthService {
         lastName: user.lastName,
         isAdmin: user.isAdmin ? 'true' : 'false',
         isUser: user.isUser ? 'true' : 'false',
+        isSaler: user.isSaler ? 'true' : 'false',
       };
       const jwtRefreshPayload: JwtRefreshPayload = {
         id: user.id,
@@ -279,6 +367,10 @@ export class AuthService {
     }
     if (user.isUser) {
       if (user.userStatus == 'Block' || user.deletedAt != null)
+        throw new UnauthorizedException(AUTH_ERRORS.AUTH_02);
+    }
+    if (user.isSaler) {
+      if (user.salerStatus == 'Block' || user.deletedAt != null)
         throw new UnauthorizedException(AUTH_ERRORS.AUTH_02);
     }
     const chekPassword = await this._comparePasswords(password, user.password);

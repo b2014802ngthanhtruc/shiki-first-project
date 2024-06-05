@@ -11,6 +11,21 @@ CREATE TABLE "Category" (
 );
 
 -- CreateTable
+CREATE TABLE "Product" (
+    "id" VARCHAR(36) NOT NULL,
+    "name" VARCHAR(255) NOT NULL,
+    "price" DOUBLE PRECISION NOT NULL,
+    "quantity" INTEGER NOT NULL,
+    "description" TEXT NOT NULL,
+    "categoryId" VARCHAR(255) NOT NULL,
+    "create_at" TIMESTAMPTZ(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "update_at" TIMESTAMPTZ(3),
+    "delete_at" TIMESTAMPTZ(3),
+
+    CONSTRAINT "Product_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "seeds" (
     "id" VARCHAR(36) NOT NULL,
     "key" VARCHAR(255) NOT NULL,
@@ -44,3 +59,6 @@ CREATE UNIQUE INDEX "seeds_key_key" ON "seeds"("key");
 
 -- AddForeignKey
 ALTER TABLE "Category" ADD CONSTRAINT "Category_parentId_fkey" FOREIGN KEY ("parentId") REFERENCES "Category"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Product" ADD CONSTRAINT "Product_categoryId_fkey" FOREIGN KEY ("categoryId") REFERENCES "Category"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

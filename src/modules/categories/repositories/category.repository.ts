@@ -1,6 +1,6 @@
+import { DefaultArgs } from '@prisma/client/runtime/library';
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { DefaultArgs } from '@prisma/client/runtime/library';
 import { PrismaService } from '@shared/prisma/prisma.service';
 
 @Injectable()
@@ -20,6 +20,7 @@ export class CategoryRepository {
       ...params,
       include: {
         childCategories: true,
+        parent: true,
       },
     });
   }

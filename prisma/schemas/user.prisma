@@ -6,8 +6,10 @@ model User {
   lastName    String? @map("last_name") @db.VarChar(255)
   adminStatus String  @db.VarChar(255)
   userStatus  String  @db.VarChar(255)
+  salerStatus String  @db.VarChar(255)
   isAdmin     Boolean @default(false) @map("is_admin") @db.Boolean
   isUser      Boolean @default(false) @map("is_user") @db.Boolean
+  isSaler     Boolean @default(false) @map("is_saler") @db.Boolean
 
   resetCode String?   @db.VarChar(255)
   expireAt  DateTime? @db.Timestamptz(3)
