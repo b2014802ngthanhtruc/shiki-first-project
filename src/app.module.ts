@@ -1,25 +1,28 @@
-import { Environment } from '@common/enums';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+
+import { AdminJwtAccessAuthGuard } from '@modules/auth/guards/admin-jwt-access-auth.guard';
 import { AllExceptionsFilter } from '@common/filters';
-import { ResponseTransformInterceptor } from '@common/interceptors';
-import { ConfigSchema } from '@config/config.schema';
-import { AuthModule } from '@modules/auth/auth.module';
-import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
-import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
-import { PrismaModule } from '@shared/prisma/prisma.module';
-import { ResponseModule } from '@shared/response/response.module';
+import { AnyOfGuard } from '@modules/auth/guards/any-of-guard.guard';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { UsersModule } from './modules/users/users.module';
-import { MailerModule } from '@nestjs-modules/mailer';
-import { join } from 'path';
-import { MailService } from '@shared/mail/mail.service';
+import { AuthModule } from '@modules/auth/auth.module';
 import { BullModule } from '@nestjs/bull';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { ConfigModule } from '@nestjs/config';
+import { ConfigSchema } from '@config/config.schema';
+import { Environment } from '@common/enums';
 import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { MailModule } from '@shared/mail/mail.module';
-
-import { CategoriesModule } from './modules/categories/categories.module';
+import { MailService } from '@shared/mail/mail.service';
+import { MailerModule } from '@nestjs-modules/mailer';
+import { Module } from '@nestjs/common';
+import { PrismaModule } from '@shared/prisma/prisma.module';
 import { ProductModule } from '@modules/products/product.module';
+import { ResponseModule } from '@shared/response/response.module';
+import { ResponseTransformInterceptor } from '@common/interceptors';
+import { SalerJwtAccessAuthGuard } from '@modules/auth/guards/saler-jwt-auth.guard';
+import { UsersModule } from './modules/users/users.module';
+import { join } from 'path';
 
 @Module({
   imports: [
@@ -71,6 +74,10 @@ import { ProductModule } from '@modules/products/product.module';
   providers: [
     AppService,
     MailService,
+    {
+      provide: APP_GUARD,
+      useClass: AnyOfGuard,
+    },
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
     { provide: APP_INTERCEPTOR, useClass: ResponseTransformInterceptor },
   ],

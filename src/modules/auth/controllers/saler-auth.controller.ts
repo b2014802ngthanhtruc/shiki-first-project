@@ -34,7 +34,6 @@ export class SalerAuthController {
     return this._authService.salerLogin(data);
   }
 
-  @UseGuards(SalerJwtAccessAuthGuard)
   @Post('refresh-token')
   async refreshToken(
     @Body(new JoiValidationPipe(RefreshTokenValidator)) data: RefreshTokenDto,

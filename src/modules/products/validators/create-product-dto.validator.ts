@@ -8,5 +8,4 @@ export const CreateProductDtoValidator = BaseValidator.keys({
   quantity: joi.number().min(1).required(),
   description: joi.string().trim().required(),
   categoryId: joi.string().id().trim().required(),
-  categories: joi.array().items(joi.string()).min(1).required(),
 });

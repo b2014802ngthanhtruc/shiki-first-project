@@ -48,8 +48,14 @@ export class ProductController {
   }
 
   @Get('/category/:id')
-  findByCategory(@Param('id') id: string) {
-    return this.productService.findByCategory(id);
+  async findByCategory(
+    @Param('id') id: string,
+    @Query(new JoiValidationPipe(BaseQueryParamsValidator))
+    query: BaseQueryParams,
+    @Req() req,
+  ) {
+    const { count, data } = await this.productService.findByCategory(id, query);
+    return ResponseService.paginateResponse({ count, data, query, req });
   }
 
   @Patch(':id')

@@ -1,20 +1,15 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { BaseQueryParams } from '@common/dtos';
 import { CategoryRepository } from '../repositories/category.repository';
 import { CreateCategoryDto } from '../dtos/createCategories.dto';
-import { ProductRepository } from '@modules/products/repositories/product.repository';
-import { ProductService } from '@modules/products/services/product.service';
 import { UpdateCategoryDto } from '../dtos/updateCategories.dto';
-import { join } from 'path';
 
 @Injectable()
 export class CategoryService {
-  constructor(private readonly categoryRepository: CategoryRepository) {}
+  constructor(
+    private readonly categoryRepository: CategoryRepository, // private readonly productRepository: ProductRepository,
+  ) {}
 
   async create(createCategoryDto: CreateCategoryDto) {
     const productName = await this.categoryRepository.findOne({
@@ -96,6 +91,24 @@ export class CategoryService {
     });
   }
 
+  async remove(id: string) {
+    const category = await this.categoryRepository.findOne({
+      where: {
+        id,
+      },
+      include: {
+        childCategories: true,
+      },
+    });
+
+    if (!category) throw new BadRequestException('Category not found');
+    if (category.childCategories.length > 0)
+      throw new BadRequestException('Category can be delete');
+    return this.categoryRepository.delete({
+      id,
+    });
+  }
+
   // async findProduct(id: string) {
   //   const category = await this.categoryRepository.findOne({
   //     where: {
@@ -105,9 +118,11 @@ export class CategoryService {
   //   if (!category) throw new NotFoundException('Category not found');
   //   const products = await this.productRepository.findMany({
   //     where: {
-  //       categories: {
-  //         has: id,
-  //       },
+  //       OR: [
+  //         { categoryId: id },
+  //         { category: { parentId: id } },
+  //         { category: { parent: { parentId: id } } },
+  //       ],
   //     },
   //   });
   /* SELECT * FROM Product
@@ -173,22 +188,4 @@ export class CategoryService {
 
   // return products;
   //}
-
-  async remove(id: string) {
-    const category = await this.categoryRepository.findOne({
-      where: {
-        id,
-      },
-      include: {
-        childCategories: true,
-      },
-    });
-
-    if (!category) throw new BadRequestException('Category not found');
-    if (category.childCategories.length > 0)
-      throw new BadRequestException('Category can be delete');
-    return this.categoryRepository.delete({
-      id,
-    });
-  }
 }

@@ -35,21 +35,21 @@ export class ProductService {
     console.log(category);
     const categoryList = [
       createProductDto.categoryId,
-      category.parentId,
-      category.parent.parentId,
-    ];
+      category.parentId ?? null,
+      category.parent?.parentId ?? null,
+    ].filter((id) => id);
     return await this.productRepository.create({
       data: {
         name: createProductDto.name,
         price: createProductDto.price,
         quantity: createProductDto.quantity,
         description: createProductDto.description,
+        categories: categoryList,
         category: {
           connect: {
             id: createProductDto.categoryId,
           },
         },
-        categories: categoryList,
       },
     });
   }
@@ -81,29 +81,69 @@ export class ProductService {
     return product;
   }
 
-  async findByCategory(id: string) {
-    const products = await this.productRepository.findMany({
+  async findByCategory(id: string, params: BaseQueryParams) {
+    const count = await this.productRepository.count({
       where: {
         categories: {
           has: id,
         },
       },
     });
-    return products;
+    const data = await this.productRepository.findMany({
+      skip: (params.page - 1) * params.limit,
+      take: params.limit,
+      orderBy: params.sort,
+      where: {
+        categories: {
+          has: id,
+        },
+      },
+    });
+    return { count, data };
   }
 
-  async update(id: string, updateProduct: UpdateProductDto) {
+  async update(id: string, { categoryId, ...updateProduct }: UpdateProductDto) {
+    console.log(updateProduct);
     const product = await this.productRepository.findOne({
       where: {
         id,
       },
     });
     if (!product) throw new BadRequestException('Product not found');
+    if (categoryId) {
+      const category = await this.categoryRepository.findOne({
+        where: {
+          id: categoryId,
+        },
+        include: {
+          parent: true,
+        },
+      });
+      const categoryList = [
+        category.id,
+        category.parentId ?? null,
+        category.parent?.parentId ?? null,
+      ].filter((id) => id);
+      return await this.productRepository.update({
+        where: {
+          id,
+        },
+        data: {
+          category: {
+            connect: { id: categoryId },
+          },
+          categories: categoryList,
+          ...updateProduct,
+        },
+      });
+    }
     return await this.productRepository.update({
       where: {
         id,
       },
-      data: updateProduct,
+      data: {
+        ...updateProduct,
+      },
     });
   }
 

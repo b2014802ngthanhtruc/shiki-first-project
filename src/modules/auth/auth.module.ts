@@ -11,7 +11,6 @@ import {
 } from './strategies';
 
 import { AuthService } from './services';
-import { EmailConsumer } from '@shared/mail/email.consumer';
 import { MailModule } from '@shared/mail/mail.module';
 import { MailService } from '@shared/mail/mail.service';
 import { Module } from '@nestjs/common';

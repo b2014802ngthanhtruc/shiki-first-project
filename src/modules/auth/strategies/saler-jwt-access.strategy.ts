@@ -6,7 +6,7 @@ import { Injectable } from '@nestjs/common';
 import { JwtAccessPayload } from '../dtos';
 import { PassportStrategy } from '@nestjs/passport';
 
-export const SALER_JWT_ACCESS_STRATEGY = 'admin_jwt_access';
+export const SALER_JWT_ACCESS_STRATEGY = 'saler_jwt_access';
 
 @Injectable()
 export class SalerJwtAccessStrategy extends PassportStrategy(
@@ -22,6 +22,7 @@ export class SalerJwtAccessStrategy extends PassportStrategy(
   }
 
   async validate(payload: JwtAccessPayload) {
+    console.log(payload);
     return payload;
   }
 }

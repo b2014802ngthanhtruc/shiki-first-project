@@ -94,7 +94,7 @@ export class AuthService {
         'default_secret',
       ),
       [SALER_REFRESH_TOKEN]: _configService.get(
-        CONFIG_VAR.ADMIN_JWT_REFRESH_SECRET,
+        CONFIG_VAR.SALER_JWT_REFRESH_SECRET,
         'default_secret',
       ),
     };

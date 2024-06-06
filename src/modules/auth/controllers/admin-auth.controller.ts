@@ -33,7 +33,6 @@ export class AdminAuthController {
     return this._authService.adminLogin(data);
   }
 
-  @UseGuards(AdminJwtAccessAuthGuard)
   @Post('refresh-token')
   async refreshToken(
     @Body(new JoiValidationPipe(RefreshTokenValidator)) data: RefreshTokenDto,

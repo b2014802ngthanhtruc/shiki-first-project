@@ -7,6 +7,7 @@ import {
   Post,
   Query,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { CategoryService } from '../services/categories.service';
 import { CreateCategoryDto } from '../dtos/createCategories.dto';
@@ -18,11 +19,15 @@ import { ResponseService } from '@shared/response/response.service';
 import { query } from 'express';
 import { UpdateCategoryDtoValidator } from '../validators/update-category-dto.validator';
 import { CreateCategoryDtoValidator } from '../validators/create-category-dto.validator';
+import { AdminJwtAccessAuthGuard } from '@modules/auth/guards/admin-jwt-access-auth.guard';
+import { AnyOfGuard } from '@modules/auth/guards/any-of-guard.guard';
+import { SalerJwtAccessAuthGuard } from '@modules/auth/guards/saler-jwt-auth.guard';
 
 @Controller('categories')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
+  @UseGuards(SalerJwtAccessAuthGuard)
   @Post()
   create(
     @Body(new JoiValidationPipe(CreateCategoryDtoValidator))

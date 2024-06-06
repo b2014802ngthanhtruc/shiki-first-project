@@ -7,5 +7,6 @@ export const UpdateProductDtoValidator = BaseValidator.keys({
   price: joi.number().min(1),
   quantity: joi.number().min(1),
   description: joi.string().trim(),
+  categoryId: joi.string().id().trim(),
   updateAt: joi.date().default(() => new Date()),
 });
