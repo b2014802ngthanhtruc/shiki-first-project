@@ -3,7 +3,6 @@ import { CategoryController } from './controllers/categories.controller';
 import { CategoryRepository } from './repositories/category.repository';
 import { CategoryService } from './services/categories.service';
 import { Module } from '@nestjs/common';
-import { ProductModule } from '@modules/products/product.module';
 import { SalerJwtAccessAuthGuard } from '@modules/auth/guards/saler-jwt-auth.guard';
 
 @Module({

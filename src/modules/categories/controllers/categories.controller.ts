@@ -1,6 +1,8 @@
+import { OrAuthGuard } from './../../auth/guards/or-auth.guard';
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -16,18 +18,15 @@ import { BaseQueryParams } from '@common/dtos';
 import { BaseQueryParamsValidator } from '@common/validators';
 import { JoiValidationPipe } from '@common/pipes';
 import { ResponseService } from '@shared/response/response.service';
-import { query } from 'express';
+
 import { UpdateCategoryDtoValidator } from '../validators/update-category-dto.validator';
 import { CreateCategoryDtoValidator } from '../validators/create-category-dto.validator';
-import { AdminJwtAccessAuthGuard } from '@modules/auth/guards/admin-jwt-access-auth.guard';
-import { AnyOfGuard } from '@modules/auth/guards/any-of-guard.guard';
-import { SalerJwtAccessAuthGuard } from '@modules/auth/guards/saler-jwt-auth.guard';
 
 @Controller('categories')
 export class CategoryController {
   constructor(private readonly categoryService: CategoryService) {}
 
-  @UseGuards(SalerJwtAccessAuthGuard)
+  @UseGuards(OrAuthGuard)
   @Post()
   create(
     @Body(new JoiValidationPipe(CreateCategoryDtoValidator))
@@ -50,6 +49,7 @@ export class CategoryController {
     return this.categoryService.findOne(id);
   }
 
+  @UseGuards(OrAuthGuard)
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -57,5 +57,11 @@ export class CategoryController {
     updateCategories: UpdateCategoryDto,
   ) {
     return this.categoryService.update(id, updateCategories);
+  }
+
+  @UseGuards(OrAuthGuard)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.categoryService.remove(id);
   }
 }

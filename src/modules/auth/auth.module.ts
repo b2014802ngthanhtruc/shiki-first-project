@@ -10,6 +10,7 @@ import {
   SalerJwtAccessStrategy,
 } from './strategies';
 
+import { AuthQueueService } from './services/auth-queue.service';
 import { AuthService } from './services';
 import { MailModule } from '@shared/mail/mail.module';
 import { MailService } from '@shared/mail/mail.service';
@@ -27,8 +28,8 @@ import { UsersModule } from '@modules/users/users.module';
     LocalStrategy,
     AdminJwtAccessStrategy,
     SalerJwtAccessStrategy,
-    // Repositories
+    AuthQueueService,
   ],
-  exports: [AuthService],
+  exports: [AuthService, AuthQueueService],
 })
 export class AuthModule {}

@@ -1,5 +1,6 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
+import { AuthService } from '../services';
 import { CONFIG_VAR } from '@config/index';
 import { ConfigService } from '@nestjs/config';
 import { Injectable } from '@nestjs/common';
@@ -13,7 +14,10 @@ export class SalerJwtAccessStrategy extends PassportStrategy(
   Strategy,
   SALER_JWT_ACCESS_STRATEGY,
 ) {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    private readonly _authService: AuthService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -22,7 +26,7 @@ export class SalerJwtAccessStrategy extends PassportStrategy(
   }
 
   async validate(payload: JwtAccessPayload) {
-    console.log(payload);
-    return payload;
+    const saler = await this._authService.validateSaler(payload);
+    return saler;
   }
 }

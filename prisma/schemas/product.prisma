@@ -3,13 +3,18 @@ model Product {
     name        String   @db.VarChar(255)
     price       Float
     quantity    Int
+    sold        Int
     description String
     categoryId  String   @db.VarChar(255)
     categories  String[]
 
-    category Category? @relation("ProductOfCategory", fields: [categoryId], references: [id])
+    category    Category?     @relation("ProductOfCategory", fields: [categoryId], references: [id])
+    cartItme    CartItem[]
+    orderDetail OrderDetail[]
 
     createAt DateTime  @default(now()) @map("create_at") @db.Timestamptz(3)
     updateAt DateTime? @map("update_at") @db.Timestamptz(3)
     deleteAt DateTime? @map("delete_at") @db.Timestamptz(3)
+
+    @@map("products")
 }

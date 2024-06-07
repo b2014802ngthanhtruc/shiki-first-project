@@ -1,18 +1,8 @@
-import { RequestUser } from './../../../common/decorators/request-user.decorator';
 import { JoiValidationPipe } from '@common/pipes';
-import {
-  BadRequestException,
-  Body,
-  Controller,
-  Get,
-  Post,
-  UseGuards,
-  ValidationPipe,
-} from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards } from '@nestjs/common';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,
-  JwtRefreshPayload,
   LoginDto,
   RefreshTokenDto,
   RegisterDto,
@@ -28,8 +18,6 @@ import {
   RegisterValidator,
   ResetPasswordValidator,
 } from '../validators';
-import { AUTH_ERRORS } from 'src/content/errors/auth.error';
-import { UserInfo } from 'firebase-admin/lib/auth/user-record';
 
 @Controller('general/auth')
 export class AuthController {

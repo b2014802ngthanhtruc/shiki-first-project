@@ -10,4 +10,6 @@ model Category {
 
     createAt DateTime  @default(now()) @map("create_at") @db.Timestamptz(3)
     updateAt DateTime? @map("update_at") @db.Timestamptz(3)
+
+    @@map("categories")
 }

@@ -114,7 +114,7 @@ export class UsersService {
 
   saveResetCode(id: string, resetCode: string) {
     const expireAt = new Date();
-    expireAt.setMinutes(expireAt.getMinutes() + 1);
+    expireAt.setMinutes(expireAt.getMinutes() + 3);
     return this._userRepository.update({
       where: {
         id,

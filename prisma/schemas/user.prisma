@@ -14,7 +14,13 @@ model User {
   resetCode String?   @db.VarChar(255)
   expireAt  DateTime? @db.Timestamptz(3)
 
+  cartItem CartItem[] 
+  orders Order[]
+  trackingOrders TrackingOrder[]
+
   createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt DateTime? @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt DateTime? @map("deleted_at") @db.Timestamptz(3)
+
+  @@map("users")
 }

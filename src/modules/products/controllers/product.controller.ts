@@ -10,8 +10,8 @@ import {
   Param,
   Patch,
   Delete,
-  Request,
   Req,
+  UseGuards,
 } from '@nestjs/common';
 import { BaseQueryParams } from '@common/dtos';
 import { JoiValidationPipe } from '@common/pipes';
@@ -19,11 +19,13 @@ import { UpdateProductDto } from '../dtos/updateProduct.dto';
 import { ResponseService } from '@shared/response/response.service';
 import { UpdateProductDtoValidator } from '../validators/update-product-dto.validator';
 import { CreateProductDtoValidator } from '../validators/create-product-dto.validator';
+import { OrAuthGuard } from '@modules/auth/guards/or-auth.guard';
 
 @Controller('products')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
+  @UseGuards(OrAuthGuard)
   @Post()
   create(
     @Body(new JoiValidationPipe(CreateProductDtoValidator))
@@ -58,6 +60,7 @@ export class ProductController {
     return ResponseService.paginateResponse({ count, data, query, req });
   }
 
+  @UseGuards(OrAuthGuard)
   @Patch(':id')
   update(
     @Param('id') params: string,
@@ -67,6 +70,7 @@ export class ProductController {
     return this.productService.update(params, data);
   }
 
+  @UseGuards(OrAuthGuard)
   @Delete(':id')
   delete(@Param('id') params: string) {
     return this.productService.remove(params);

@@ -13,6 +13,7 @@ import {
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import {
@@ -26,16 +27,13 @@ import {
   ResetPasswordDto,
 } from '../dtos';
 import { JwtPayload, SignOptions, decode, sign } from 'jsonwebtoken';
-import { boolean, string } from 'joi';
 
 import { AUTH_ERRORS } from 'src/content/errors/auth.error';
+import { AuthQueueService } from './auth-queue.service';
 import { CONFIG_VAR } from '@config/index';
 import { ConfigService } from '@nestjs/config';
 import { CreateUserDto } from '@modules/users/dto/create-user.dto';
-import { LoginProviderType } from '../enums/login-provider-type.enum';
-import { MailService } from '../../../shared/mail/mail.service';
 import { UsersService } from '@modules/users/services/users.service';
-import { use } from 'passport';
 
 export type TokenType =
   | typeof ACCESS_TOKEN
@@ -70,7 +68,8 @@ export class AuthService {
   constructor(
     private readonly _configService: ConfigService,
     private readonly userService: UsersService,
-    private readonly mailService: MailService,
+
+    private readonly authQueueService: AuthQueueService,
   ) {
     this._jwtKeys = {
       [ACCESS_TOKEN]: this._configService.get(
@@ -293,9 +292,12 @@ export class AuthService {
     const user = await this.userService.findByEmail(email);
 
     const resetCode = this.generalResetCode();
-    this.userService.saveResetCode(user.id, resetCode);
+    await this.userService.saveResetCode(user.id, resetCode);
     try {
-      return await this.mailService.sendResetEmail(email, resetCode);
+      await this.authQueueService.addSendEmailJob(email, resetCode);
+      return {
+        message: 'Email send success',
+      };
     } catch (error) {
       console.log(error);
     }
@@ -305,7 +307,9 @@ export class AuthService {
     const user = await this.userService.findResetCode(data.code);
     if (!user) throw new UnauthorizedException('Invalid reset code');
     const passwordHash = await this._hashPassword(data.password);
-    return await this.userService.updatePassword(user.id, passwordHash);
+    const result = await this.userService.updatePassword(user.id, passwordHash);
+    if (result) await this.userService.cleanResetCode(user.id);
+    return result;
   }
 
   async adminGetStarted(data: GetStartedDto) {
@@ -379,10 +383,34 @@ export class AuthService {
     }
     throw new UnauthorizedException(AUTH_ERRORS.AUTH_03);
   }
+
+  //For Admin strategy
+  async validateAdmin(payload: JwtAccessPayload) {
+    const user = await this.userService.findOne(payload.id);
+    if (!user) {
+      throw new NotFoundException('Admin account not found');
+    }
+    if (!user.isAdmin || user.adminStatus === 'Block') {
+      throw new UnauthorizedException();
+    }
+    return payload;
+  }
+
+  //For Saler strategy
+  async validateSaler(payload: JwtAccessPayload) {
+    const user = await this.userService.findOne(payload.id);
+    if (!user) {
+      throw new NotFoundException('Saler account not found');
+    }
+    if (!user.isSaler || user.salerStatus == 'Block') {
+      throw new UnauthorizedException();
+    }
+    return payload;
+  }
   /** ============================== Passport ============================== */
 
   /** ============================== General ============================== */
-  async generateTokens() {}
+  // async generateTokens() {}
 
   private async _hashPassword(password: string) {
     const salt = await bcrypt.genSalt(10);

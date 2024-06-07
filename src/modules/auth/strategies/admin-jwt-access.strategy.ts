@@ -1,9 +1,11 @@
 import { ExtractJwt, Strategy } from 'passport-jwt';
+
+import { AuthService } from '../services';
 import { CONFIG_VAR } from '@config/index';
-import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PassportStrategy } from '@nestjs/passport';
+import { Injectable } from '@nestjs/common';
 import { JwtAccessPayload } from '../dtos';
+import { PassportStrategy } from '@nestjs/passport';
 
 export const ADMIN_JWT_ACCESS_STRATEGY = 'admin_jwt_access';
 
@@ -12,7 +14,10 @@ export class AdminJwtAccessStrategy extends PassportStrategy(
   Strategy,
   ADMIN_JWT_ACCESS_STRATEGY,
 ) {
-  constructor(configService: ConfigService) {
+  constructor(
+    configService: ConfigService,
+    private readonly _authService: AuthService,
+  ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -21,6 +26,7 @@ export class AdminJwtAccessStrategy extends PassportStrategy(
   }
 
   async validate(payload: JwtAccessPayload) {
-    return payload;
+    const admin = await this._authService.validateAdmin(payload);
+    return admin;
   }
 }
